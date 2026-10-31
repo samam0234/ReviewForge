@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: reviewforge-backend
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   mongodb:
     uri: ${MONGODB_URI:mongodb://localhost:27017/reviewforge}
   data:

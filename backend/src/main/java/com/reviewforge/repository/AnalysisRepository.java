@@ -8,7 +8,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import com.reviewforge.domain.Analysis;
 
-public interface AnalysisRepository extends MongoRepository<Analysis, String> {
+public interface AnalysisRepository extends MongoRepository<Analysis, String>, AnalysisStatsRepository {
 
 	List<Analysis> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
 
