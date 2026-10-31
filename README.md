@@ -7,13 +7,16 @@
 1. 본 프로젝트의 인수인계 및 규칙을 먼저 확인하세요: [`ReviewForge_인수인계.md`](./ReviewForge_인수인계.md)
 2. 단일 진실 공급원(SSOT): [`AGENTS.md`](./AGENTS.md)
 3. 기획서: [`Docs/plan/ReviewForge_기획서_v1.0.md`](./Docs/plan/ReviewForge_기획서_v1.0.md)
+4. 로컬 실행: [`Docs/guidance/run_local.md`](./Docs/guidance/run_local.md)
 
 ## 기술 스택
 
-- Frontend: Next.js (App Router)
-- Orchestrator: Spring Boot
-- AI/ML Server: Flask + Gradio
-- Database: MongoDB Atlas
+| 디렉터리 | 역할 | 포트 |
+|----------|------|------|
+| `frontend/` | Next.js 16 (App Router) — UI, 로그인, 대시보드 | 3000 |
+| `backend/` | Spring Boot 4.1 — 오케스트레이터, JWT, MongoDB | 8080 |
+| `ai-server/` | Flask + PyTorch + Gradio — 가짜 리뷰 분류 | 5000 / 7860 |
+| `docker-compose.yml` | 로컬 MongoDB (운영은 MongoDB Atlas) | 27017 |
 
 ## 필수 규칙 요약
 
