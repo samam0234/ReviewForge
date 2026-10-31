@@ -1,0 +1,18 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: reviewforge-backend
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/reviewforge}
+  data:
+    mongodb:
+      auto-index-creation: true
+
+reviewforge:
+  ai-server-url: ${AI_SERVER_URL:http://localhost:5000}
+  ai-timeout: 5s
+  jwt-secret: ${JWT_SECRET:local-dev-only-secret-change-me-32bytes-minimum!!}
+  jwt-expiration: 24h
+  cors-origins: ${CORS_ORIGINS:http://localhost:3000}
