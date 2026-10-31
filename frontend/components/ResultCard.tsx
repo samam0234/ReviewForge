@@ -1,0 +1,79 @@
+import type { Analysis, Highlight } from "@/lib/types";
+
+type Segment = { text: string; reason?: string };
+
+function splitByHighlights(text: string, highlights: Highlight[]): Segment[] {
+  const phrases = highlights.filter((h) => h.text.trim());
+  const segments: Segment[] = [];
+  const lower = text.toLowerCase();
+  let cursor = 0;
+  while (cursor < text.length) {
+    let best: { start: number; h: Highlight } | null = null;
+    for (const h of phrases) {
+      const start = lower.indexOf(h.text.toLowerCase(), cursor);
+      if (start >= 0 && (!best || start < best.start)) best = { start, h };
+    }
+    if (!best) break;
+    if (best.start > cursor) segments.push({ text: text.slice(cursor, best.start) });
+    const end = best.start + best.h.text.length;
+    segments.push({ text: text.slice(best.start, end), reason: best.h.reason });
+    cursor = end;
+  }
+  if (cursor < text.length) segments.push({ text: text.slice(cursor) });
+  return segments;
+}
+
+const LABEL_TEXT = { Genuine: "진짜 리뷰로 보여요", Suspicious: "의심스러운 리뷰", Fake: "가짜일 가능성이 높아요" };
+
+export default function ResultCard({ analysis }: { analysis: Analysis }) {
+  const percent = Math.round(analysis.fakeProbability * 100);
+  const reasons = analysis.highlights.filter((h) => !h.text.trim());
+  return (
+    <section className={`card result result-${analysis.label.toLowerCase()}`}>
+      <header className="result-head">
+        <span className="badge">{analysis.label}</span>
+        <strong>{LABEL_TEXT[analysis.label]}</strong>
+      </header>
+
+      <div className="meter" aria-label={`가짜 확률 ${percent}%`}>
+        <div className="meter-fill" style={{ width: `${percent}%` }} />
+      </div>
+      <dl className="stats">
+        <div>
+          <dt>가짜 확률</dt>
+          <dd>{percent}%</dd>
+        </div>
+        <div>
+          <dt>판정 확신도</dt>
+          <dd>{analysis.confidenceScore}</dd>
+        </div>
+      </dl>
+
+      <p className="review-text">
+        {splitByHighlights(analysis.reviewText, analysis.highlights).map((s, i) =>
+          s.reason ? (
+            <mark key={i} title={s.reason}>
+              {s.text}
+            </mark>
+          ) : (
+            <span key={i}>{s.text}</span>
+          ),
+        )}
+      </p>
+
+      {analysis.keywords.length > 0 && (
+        <ul className="chips">
+          {analysis.keywords.map((k) => (
+            <li key={k}>{k}</li>
+          ))}
+        </ul>
+      )}
+      {reasons.map((r) => (
+        <p key={r.reason} className="muted">
+          · {r.reason}
+        </p>
+      ))}
+      <p className="muted small">{analysis.saved ? "분석 기록에 저장되었습니다." : "로그인하면 분석 기록이 저장됩니다."}</p>
+    </section>
+  );
+}
