@@ -4,10 +4,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -59,13 +63,19 @@ public class AiClient {
 		}
 	}
 
-	private static Object multipart(String text, ImageUpload image) {
-		MultipartBodyBuilder builder = new MultipartBodyBuilder();
-		builder.part("text", text);
-		builder.part("image", new ByteArrayResource(image.bytes()))
-				.filename(image.filename())
-				.contentType(image.contentType());
-		return builder.build();
+	/**
+	 * FormHttpMessageConverter 가 직렬화하는 multipart 본문.
+	 * MultipartBodyBuilder 는 WebClient 용이라 Reactive Streams 가 없는 서블릿 환경에서 NoClassDefFoundError 가 난다.
+	 */
+	static MultiValueMap<String, Object> multipart(String text, ImageUpload image) {
+		HttpHeaders imageHeaders = new HttpHeaders();
+		imageHeaders.setContentType(image.contentType());
+		imageHeaders.setContentDisposition(
+				ContentDisposition.formData().name("image").filename(image.filename(), StandardCharsets.UTF_8).build());
+		MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+		body.add("text", text);
+		body.add("image", new HttpEntity<>(new ByteArrayResource(image.bytes()), imageHeaders));
+		return body;
 	}
 
 	/** Flask 의 입력 오류(400·413)는 사용자 메시지를 그대로 전달하고, 그 외는 502 로 감싼다. */
