@@ -28,6 +28,7 @@ const LABEL_TEXT = { Genuine: "진짜 리뷰로 보여요", Suspicious: "의심�
 export default function ResultCard({ analysis }: { analysis: Analysis }) {
   const percent = Math.round(analysis.fakeProbability * 100);
   const reasons = analysis.highlights.filter((h) => !h.text.trim());
+  const image = analysis.image;
   return (
     <section className={`card result result-${analysis.label.toLowerCase()}`}>
       <header className="result-head">
@@ -47,6 +48,18 @@ export default function ResultCard({ analysis }: { analysis: Analysis }) {
           <dt>판정 확신도</dt>
           <dd>{analysis.confidenceScore}</dd>
         </div>
+        {image && analysis.textFakeProbability != null && (
+          <>
+            <div>
+              <dt>텍스트</dt>
+              <dd>{Math.round(analysis.textFakeProbability * 100)}%</dd>
+            </div>
+            <div>
+              <dt>사진</dt>
+              <dd>{Math.round(image.fakeProbability * 100)}%</dd>
+            </div>
+          </>
+        )}
       </dl>
 
       <p className="review-text">
@@ -73,6 +86,28 @@ export default function ResultCard({ analysis }: { analysis: Analysis }) {
           · {r.reason}
         </p>
       ))}
+      {image && (
+        <div className="image-result">
+          <p className="small">
+            <strong>사진 분석</strong>{" "}
+            <span className={`badge badge-${image.label.toLowerCase()}`}>{image.label}</span>{" "}
+            <span className="muted">
+              {image.width}×{image.height} ·{" "}
+              {image.source === "rules" ? "메타데이터 규칙 (EfficientNet-B3 미학습)" : "EfficientNet-B3 + 규칙"}
+            </span>
+          </p>
+          {image.signals.length === 0 ? (
+            <p className="muted small">· 특이 신호 없음</p>
+          ) : (
+            image.signals.map((s) => (
+              <p key={s} className="muted small">
+                · {s}
+              </p>
+            ))
+          )}
+          <p className="muted small">사진은 텍스트보다 의심도를 높일 때만 반영됩니다.</p>
+        </div>
+      )}
       <p className="muted small">{analysis.saved ? "분석 기록에 저장되었습니다." : "로그인하면 분석 기록이 저장됩니다."}</p>
     </section>
   );
