@@ -280,3 +280,22 @@ mark {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.file-label {
+  font-weight: 600;
+}
+
+input[type="file"] {
+  border: none;
+  padding: 0;
+}
+
+.image-result {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.image-result p {
+  margin: 0;
+}

@@ -11,18 +11,10 @@ import torch
 from ml.model import FakeReviewClassifier, collate
 from ml.preprocess import Vocabulary
 from ml.rules import rule_signals
+from ml.scoring import hybrid, summarize, to_label  # noqa: F401  (to_label 은 기존 import 경로 호환)
 
 DEFAULT_MODEL_PATH = Path(__file__).resolve().parent / "artifacts" / "model.pt"
-ML_WEIGHT = 0.7
 MAX_KEYWORDS = 5
-
-
-def to_label(fake_probability: float) -> str:
-    if fake_probability >= 0.7:
-        return "Fake"
-    if fake_probability >= 0.4:
-        return "Suspicious"
-    return "Genuine"
 
 
 class Predictor:
@@ -63,25 +55,18 @@ class Predictor:
         highlights = [{"text": h["text"], "reason": h["reason"]} for h in rules["hits"]]
         keywords = [h["text"] for h in rules["hits"] if h["text"]]
 
+        ml_prob = None
         if self.model_loaded:
             ml_prob, contributions = self._model_predict(text)
-            fake_probability = ML_WEIGHT * ml_prob + (1 - ML_WEIGHT) * rules["score"]
             suspicious_words = sorted((c for c in contributions if c[1] > 0), key=lambda c: -c[1])
             for word, _ in suspicious_words[:MAX_KEYWORDS]:
                 if word not in keywords and word[0] not in "!?":
                     keywords.append(word)
                     highlights.append({"text": word, "reason": "모델 기여도 높음"})
-            source = "hybrid"
-        else:
-            fake_probability = 0.1 + 0.8 * rules["score"]
-            source = "rules"
 
-        fake_probability = round(fake_probability, 4)
         return {
-            "fakeProbability": fake_probability,
-            "confidenceScore": round(max(fake_probability, 1 - fake_probability) * 100),
-            "label": to_label(fake_probability),
+            **summarize(hybrid(ml_prob, rules["score"])),
             "keywords": keywords[:MAX_KEYWORDS],
             "highlights": highlights,
-            "source": source,
+            "source": "hybrid" if self.model_loaded else "rules",
         }

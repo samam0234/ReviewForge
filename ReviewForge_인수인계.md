@@ -1,11 +1,11 @@
 # ReviewForge 에이전트 인수인계 및 규칙
 
 **프로젝트명**: ReviewForge  
-**버전**: 1.0  
+**버전**: 1.1 (리뷰 사진 분석 · 점수 계산 공통화 · 통계 집계)  
 **작성일**: 2026-11-01  
 **기술 스택**: Next.js (App Router) + Spring Boot + Flask + MongoDB Atlas  
 **유형**: 미니 프로젝트 (Vibe Coding 대상)  
-**ML 핵심**: TensorFlow / PyTorch (NLP Classification) + Gradio MVP  
+**ML 핵심**: PyTorch (NLP Classification) + **EfficientNet-B3** (리뷰 사진) + Gradio MVP  
 **SSOT**: 루트 `AGENTS.md` (본 문서는 인수인계 및 규칙 원본, AGENTS.md는 이를 가리킴)
 
 ---
@@ -33,15 +33,16 @@
 
 ### MVP 범위
 - 리뷰 텍스트 입력 (단일 또는 다중 리뷰)
+- 리뷰 사진 첨부 (선택, v1.1) — EfficientNet-B3 + 메타데이터 규칙, 원본 미저장
 - AI 기반 가짜 리뷰 확률 분석 (신뢰도 점수 0~100)
 - 주요 판단 근거 키워드/패턴 하이라이트 (선택)
 - 사용자 분석 기록 저장 (날짜, 리뷰 내용, 점수, 결과)
 - 간단한 로그인/회원가입 (Next.js 기반 동적 기능)
 - Gradio 데모 페이지: 모델 직접 테스트 및 결과 시각화
-- 기본 대시보드: 최근 분석 목록 및 평균 신뢰도 요약
+- 기본 대시보드: 최근 분석 목록 + 전체 기록 기준 통계 (MongoDB 집계, v1.1)
 
 ### 제외 범위 (향후 확장)
-- 이미지 포함 리뷰 분석 (사진 조작 탐지)
+- 고급 이미지 위변조 포렌식 (픽셀 단위 합성 위치 탐지 등) — v1.1 은 사진 단위 분류만
 - 실시간 대량 리뷰 크롤링 및 배치 분석
 - 다중 언어 지원 (한국어 외)
 - 고급 소셜 로그인 / OAuth
@@ -62,7 +63,13 @@
 | ML / 데이터 | TensorFlow 또는 PyTorch, Pandas, Gradio | 가짜 리뷰 분류 모델, 데이터 전처리, MVP 결과 시각화 | - |
 | 기타 | NextAuth 또는 JWT, RestTemplate / WebClient, Bean Validation | 인증, 서비스 간 통신, 입력 검증 | - |
 
-**AI/ML 옵션 (MVP 우선순위)**:
+**ML 모델 규칙 (필수·예외 없음, 2026-11-01 사용자 지시)**:
+- 새로 도입하는 머신러닝 모델은 **EfficientNet-B3** 를 사용한다 (torchvision `efficientnet_b3`, ImageNet 사전학습).
+- 현재 적용: 리뷰 사진 분류 (`ai-server/ml/image_*.py`). 텍스트 분류기(v1.0 fastText 방식)는 기존 유지.
+- 분류 헤드가 학습되지 않은 체크포인트는 서비스에 쓰지 않는다 (없으면 규칙 기반으로 동작).
+- 점수 계산은 `ai-server/ml/scoring.py` 한곳에서만 한다. 규칙: [`Docs/guidance/scoring.md`](./Docs/guidance/scoring.md)
+
+**AI/ML 옵션 (MVP 우선순위, v1.0 당시 검토)**:
 1. 사전 학습된 BERT 계열 모델 파인튜닝 또는 Hugging Face 텍스트 분류 파이프라인 + 간단한 신뢰도 매핑
 2. Amazon 또는 Yelp 가짜 리뷰 데이터셋 기반 Transfer Learning (BERT, DistilBERT 등) with TensorFlow/Keras 또는 PyTorch
 3. 규칙 기반 + ML 하이브리드로 시작 (빠른 MVP)
@@ -186,8 +193,9 @@ reviewforge/
 ### Spring Boot API
 | Method | Endpoint | 설명 |
 |--------|----------|------|
-| POST | `/api/analyze` | 리뷰 텍스트 분석 요청 |
+| POST | `/api/analyze` | 리뷰 텍스트 분석 요청 (JSON) / 텍스트 + 사진 (multipart, v1.1) |
 | GET | `/api/analyses` | 사용자 분석 기록 목록 조회 |
+| GET | `/api/analyses/stats` | 사용자 전체 기록 통계 (v1.1) |
 | GET | `/api/analyses/:id` | 특정 분석 상세 조회 |
 | POST | `/api/auth/login` | 로그인 (또는 NextAuth 연동) |
 | POST | `/api/auth/register` | 회원가입 |
@@ -195,8 +203,8 @@ reviewforge/
 ### Flask AI Server API
 | Method | Endpoint | 설명 |
 |--------|----------|------|
-| POST | `/analyze` | 리뷰 텍스트 → 가짜 확률, 신뢰도, 키워드 반환 |
-| GET | `/health` | 헬스 체크 |
+| POST | `/analyze` | 리뷰 텍스트(+ 선택 사진) → 가짜 확률, 확신도, 키워드, 사진 결과 반환 |
+| GET | `/health` | 헬스 체크 (`modelLoaded`, `imageModelLoaded`) |
 | Gradio | `/gradio` 또는 별도 포트 | MVP 데모 인터페이스 |
 
 **응답 예시** (JSON):
@@ -212,7 +220,7 @@ reviewforge/
 
 ### 데이터 모델 (MongoDB)
 - **User**: `{ id, email, name, createdAt }`
-- **Analysis**: `{ id, userId, reviewText, fakeProbability, confidenceScore, label, keywords, createdAt }`
+- **Analysis**: `{ id, userId, reviewText, fakeProbability, confidenceScore, label, keywords, highlights, textFakeProbability, image, createdAt }` (`image` 는 결과만, 원본 사진 없음)
 
 ---
 
@@ -266,7 +274,11 @@ reviewforge/
 
 모든 에이전트는 작업 시작 전 `AGENTS.md`를 확인한다.
 
-### 6.7 기타 필수 파일
+### 6.7 ML 모델 (필수·예외 없음)
+- 머신러닝 모델을 새로 쓸 때는 **EfficientNet-B3** 를 사용한다. (2장 "ML 모델 규칙" 참고)
+- ML 추론·학습 코드는 `ai-server/` 에만 둔다. 백엔드·프론트에는 점수 계산을 다시 구현하지 않는다 (통계 집계 제외).
+
+### 6.8 기타 필수 파일
 - `.gitattributes`
 - `LICENSE`
 - `SECURITY.md`

@@ -18,6 +18,7 @@ import pandas as pd
 import torch
 from torch import nn
 
+from ml.metrics import evaluate, pos_weight
 from ml.model import FakeReviewClassifier, collate
 from ml.preprocess import Vocabulary
 
@@ -36,27 +37,11 @@ def stratified_split(df: pd.DataFrame, val_ratio: float, seed: int) -> tuple[pd.
     return df.drop(val.index), val
 
 
-def binary_metrics(y_true: list[int], y_pred: list[int]) -> dict[str, float]:
-    tp = sum(1 for t, p in zip(y_true, y_pred) if t == p == 1)
-    fp = sum(1 for t, p in zip(y_true, y_pred) if t == 0 and p == 1)
-    fn = sum(1 for t, p in zip(y_true, y_pred) if t == 1 and p == 0)
-    correct = sum(1 for t, p in zip(y_true, y_pred) if t == p)
-    precision = tp / (tp + fp) if tp + fp else 0.0
-    recall = tp / (tp + fn) if tp + fn else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-    return {
-        "accuracy": round(correct / len(y_true), 4),
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "f1": round(f1, 4),
-    }
-
-
 @torch.no_grad()
-def predict_labels(model: FakeReviewClassifier, encoded: list[list[int]]) -> list[int]:
+def predict_probabilities(model: FakeReviewClassifier, encoded: list[list[int]]) -> list[float]:
     model.eval()
     ids, offsets = collate(encoded)
-    return (torch.sigmoid(model(ids, offsets)) >= 0.5).long().tolist()
+    return torch.sigmoid(model(ids, offsets)).tolist()
 
 
 def train(args: argparse.Namespace) -> dict:
@@ -72,7 +57,7 @@ def train(args: argparse.Namespace) -> dict:
 
     model = FakeReviewClassifier(len(vocab), args.embed_dim)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    loss_fn = nn.BCEWithLogitsLoss()
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight(train_df["label"].tolist())))
 
     order = list(range(len(x_train)))
     for epoch in range(1, args.epochs + 1):
@@ -91,8 +76,8 @@ def train(args: argparse.Namespace) -> dict:
             print(f"epoch {epoch:3d}  loss {total / len(order):.4f}")
 
     metrics = {
-        "train": binary_metrics(train_df["label"].tolist(), predict_labels(model, x_train)),
-        "val": binary_metrics(val_df["label"].tolist(), predict_labels(model, x_val)),
+        "train": evaluate(train_df["label"].tolist(), predict_probabilities(model, x_train)),
+        "val": evaluate(val_df["label"].tolist(), predict_probabilities(model, x_val)),
         "samples": {"train": len(train_df), "val": len(val_df)},
         "vocab_size": len(vocab),
         "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
