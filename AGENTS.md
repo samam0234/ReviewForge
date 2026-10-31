@@ -23,15 +23,15 @@
 Docs : 문서 저장하는 폴더
 | 폴더 | 용도 |
 |------|------|
-| [plan/](./plan/) | 초기 기획·로직·DB·배포 계획 (기존) |
-| [Architecture/](./Architecture/) | 시스템·계층·데이터 흐름 아키텍처 |
-| [branchs/](./branchs/) | 브랜치·커밋 기록 (템플릿 필수) |
-| [find_debug/](./find_debug/) | 작업/실행 디버깅 일일 기록 |
-| [guidance/](./guidance/) | 기능·실행 가이드 |
-| [trainings/](./trainings/) | 학습·연구 정리 |
-| [repeater/](./repeater/) | 서버 연결·인프라 장애와 해결 |
-| [vaildates/](./vaildates/) | 검증·체크리스트 |
-| [web_management/](./web_management/) | 배포 전/배포 시 웹 관리 기록 |
+| [plan/](./Docs/plan/) | 초기 기획·로직·DB·배포 계획 (기존) |
+| [Architecture/](./Docs/Architecture/) | 시스템·계층·데이터 흐름 아키텍처 |
+| [branchs/](./Docs/branchs/) | 브랜치·커밋 기록 (템플릿 필수) |
+| [find_debug/](./Docs/find_debug/) | 작업/실행 디버깅 일일 기록 |
+| [guidance/](./Docs/guidance/) | 기능·실행 가이드 |
+| [trainings/](./Docs/trainings/) | 학습·연구 정리 |
+| [repeater/](./Docs/repeater/) | 서버 연결·인프라 장애와 해결 |
+| [vaildates/](./Docs/vaildates/) | 검증·체크리스트 |
+| [web_management/](./Docs/web_management/) | 배포 전/배포 시 웹 관리 기록 |
 
 ---
 
@@ -87,5 +87,16 @@ push, 병합, 삭제, 덮어쓰기는 명시적 지시가 있을 때만 합니�
 ---
 
 반드시 .gitattributes, LICENSE, SECURITY.md 등 만들기
+
+---
+
+---
+
+ReviewForge 프로젝트 추가 규칙 (필수·예외 없음)
+---
+
+- 상세 규칙 원본: [`ReviewForge_인수인계.md`](./ReviewForge_인수인계.md) 6장
+- 머신러닝 모델을 새로 사용할 때는 **EfficientNet-B3** 를 사용한다. (2026-11-01 사용자 지시)
+- 점수 계산은 `ai-server/ml/scoring.py` 한곳에서만 하고, 규칙은 [`Docs/guidance/scoring.md`](./Docs/guidance/scoring.md) 에 맞춘다.
 
 ---
