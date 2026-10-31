@@ -1,0 +1,22 @@
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+
+import Dashboard from "@/components/Dashboard";
+import { backendFetch } from "@/lib/backend";
+import { getCurrentUser, getToken } from "@/lib/session";
+import type { Analysis } from "@/lib/types";
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<p className="muted">분석 기록을 불러오는 중…</p>}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+async function DashboardContent() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const analyses = await backendFetch<Analysis[]>("/api/analyses?limit=20", { token: await getToken() });
+  return <Dashboard user={user} analyses={analyses} />;
+}

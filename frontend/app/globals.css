@@ -1,0 +1,282 @@
+:root {
+  --bg: #f6f7f9;
+  --fg: #1d2330;
+  --muted: #6b7280;
+  --card: #ffffff;
+  --border: #e3e6eb;
+  --primary: #3b5bdb;
+  --genuine: #2f9e44;
+  --suspicious: #f08c00;
+  --fake: #e03131;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.container {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.site-header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header .container {
+  padding: 12px 16px;
+}
+
+.brand {
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.row.start {
+  justify-content: flex-start;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.narrow {
+  max-width: 420px;
+}
+
+.hero {
+  padding: 48px 0;
+}
+
+.hero h1 {
+  font-size: 2.2rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+textarea,
+input {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  resize: vertical;
+}
+
+button,
+.button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.ghost,
+.button.ghost {
+  background: transparent;
+  color: var(--primary);
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.muted {
+  color: var(--muted);
+  margin: 0;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.error {
+  color: var(--fake);
+  margin: 0;
+}
+
+.result {
+  border-left: 6px solid var(--muted);
+}
+
+.result-genuine {
+  border-left-color: var(--genuine);
+}
+
+.result-suspicious {
+  border-left-color: var(--suspicious);
+}
+
+.result-fake {
+  border-left-color: var(--fake);
+}
+
+.result-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.result-genuine .badge,
+.badge-genuine {
+  background: #d3f9d8;
+  color: var(--genuine);
+}
+
+.result-suspicious .badge,
+.badge-suspicious {
+  background: #fff3bf;
+  color: var(--suspicious);
+}
+
+.result-fake .badge,
+.badge-fake {
+  background: #ffe3e3;
+  color: var(--fake);
+}
+
+.meter {
+  height: 10px;
+  margin: 16px 0 8px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--genuine), var(--suspicious), var(--fake));
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 0;
+}
+
+.stats dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.stats dd {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.review-text {
+  white-space: pre-wrap;
+  background: var(--bg);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+mark {
+  background: #ffe066;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+.chips li {
+  background: #edf2ff;
+  color: var(--primary);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  padding: 0;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.ellipsis {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
