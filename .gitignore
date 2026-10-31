@@ -1,0 +1,33 @@
+# ===== 공통 =====
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ===== Frontend (Next.js) =====
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+frontend/*.tsbuildinfo
+
+# ===== Backend (Spring Boot) =====
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+
+# ===== AI Server (Flask / ML) =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+ai-server/ml/artifacts/*
+!ai-server/ml/artifacts/.gitkeep
+.gradio/
+flagged/
