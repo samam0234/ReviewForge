@@ -11,17 +11,21 @@ export class BackendError extends Error {
 
 type Options = { method?: "GET" | "POST"; body?: unknown; token?: string };
 
-/** Spring Boot 호출 (서버 전용: Route Handler / Server Component 에서만 사용). */
+/**
+ * Spring Boot 호출 (서버 전용: Route Handler / Server Component 에서만 사용).
+ * body 가 FormData 면 multipart 로 그대로 보낸다 (boundary 는 fetch 가 설정).
+ */
 export async function backendFetch<T>(path: string, { method = "GET", body, token }: Options = {}): Promise<T> {
+  const multipart = body instanceof FormData;
   let res: Response;
   try {
     res = await fetch(`${BACKEND_URL}${path}`, {
       method,
       headers: {
-        "Content-Type": "application/json",
+        ...(multipart ? {} : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
       cache: "no-store",
     });
   } catch {

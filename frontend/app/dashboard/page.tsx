@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import Dashboard from "@/components/Dashboard";
 import { backendFetch } from "@/lib/backend";
 import { getCurrentUser, getToken } from "@/lib/session";
-import type { Analysis } from "@/lib/types";
+import type { Analysis, AnalysisStats } from "@/lib/types";
 
 export default function DashboardPage() {
   return (
@@ -17,6 +17,10 @@ export default function DashboardPage() {
 async function DashboardContent() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const analyses = await backendFetch<Analysis[]>("/api/analyses?limit=20", { token: await getToken() });
-  return <Dashboard user={user} analyses={analyses} />;
+  const token = await getToken();
+  const [analyses, stats] = await Promise.all([
+    backendFetch<Analysis[]>("/api/analyses?limit=20", { token }),
+    backendFetch<AnalysisStats>("/api/analyses/stats", { token }),
+  ]);
+  return <Dashboard user={user} analyses={analyses} stats={stats} />;
 }
