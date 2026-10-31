@@ -1,5 +1,6 @@
 """Gradio MVP 데모.  실행: ai-server 디렉터리에서 `python gradio_app.py` → http://localhost:7860"""
 import os
+from pathlib import Path
 
 import gradio as gr
 from dotenv import load_dotenv
@@ -16,9 +17,10 @@ EXAMPLES = [
 ]
 
 
-def run(text: str):
+def run(text: str, image_path: str | None = None):
     try:
-        result = model_service.analyze(text)
+        image_bytes = Path(image_path).read_bytes() if image_path else None
+        result = model_service.analyze(text, image_bytes)
     except ValueError as exc:
         raise gr.Error(str(exc))
     spans = {h["text"]: h["reason"] for h in result["highlights"] if h["text"]}
@@ -39,6 +41,14 @@ def run(text: str):
         f"- 판정 확신도: **{result['confidenceScore']}**\n"
         f"- 분석 방식: `{result['source']}`"
     )
+    image = result["image"]
+    if image:
+        mode = "적용" if image["source"] != "rules" else "미학습 → 규칙만"
+        summary += (
+            f"\n\n#### 이미지 (EfficientNet-B3 {mode})\n"
+            f"- 텍스트 가짜 확률: {result['textFakeProbability'] * 100:.1f}% · 이미지: {image['fakeProbability'] * 100:.1f}%\n"
+            + "".join(f"- {signal}\n" for signal in image["signals"])
+        )
     return summary, {"Fake": p, "Genuine": 1 - p}, highlighted, result
 
 
@@ -47,6 +57,7 @@ with gr.Blocks(title="ReviewForge Demo") as demo:
     with gr.Row():
         with gr.Column():
             text_in = gr.Textbox(label="리뷰 텍스트", lines=6, placeholder="분석할 리뷰를 입력하세요")
+            image_in = gr.Image(label="리뷰 사진 (선택)", type="filepath", sources=["upload"])
             button = gr.Button("분석", variant="primary")
             gr.Examples(EXAMPLES, inputs=text_in)
         with gr.Column():
@@ -54,7 +65,7 @@ with gr.Blocks(title="ReviewForge Demo") as demo:
             prob_out = gr.Label(label="판정 확률")
             highlight_out = gr.HighlightedText(label="근거 하이라이트")
             json_out = gr.JSON(label="원본 응답")
-    button.click(run, inputs=text_in, outputs=[summary_out, prob_out, highlight_out, json_out])
+    button.click(run, inputs=[text_in, image_in], outputs=[summary_out, prob_out, highlight_out, json_out])
 
 
 if __name__ == "__main__":
