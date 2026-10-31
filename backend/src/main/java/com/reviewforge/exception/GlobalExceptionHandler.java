@@ -12,6 +12,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -34,6 +35,11 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	ResponseEntity<Map<String, String>> handleUnreadable(HttpMessageNotReadableException e) {
 		return error(HttpStatus.BAD_REQUEST, "요청 본문(JSON)을 읽을 수 없습니다.");
+	}
+
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	ResponseEntity<Map<String, String>> handleTooLarge(MaxUploadSizeExceededException e) {
+		return error(HttpStatus.CONTENT_TOO_LARGE, "이미지는 5MB 이하로 올려 주세요.");
 	}
 
 	@ExceptionHandler(Exception.class)
