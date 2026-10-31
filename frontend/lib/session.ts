@@ -22,11 +22,13 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 /** Route Handler 전용: 백엔드 인증 결과의 토큰을 httpOnly 쿠키로 저장하고 사용자만 돌려준다. */
-export async function startSession({ token, user }: AuthResponse): Promise<Response> {
+export async function startSession(request: Request, { token, user }: AuthResponse): Promise<Response> {
+  const https =
+    new URL(request.url).protocol === "https:" || request.headers.get("x-forwarded-proto") === "https";
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: https,
     path: "/",
     maxAge: MAX_AGE_SECONDS,
   });
