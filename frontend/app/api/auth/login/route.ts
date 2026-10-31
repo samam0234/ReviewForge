@@ -8,7 +8,7 @@ export async function POST(request: Request) {
       method: "POST",
       body: await request.json(),
     });
-    return startSession(auth);
+    return startSession(request, auth);
   } catch (e) {
     return errorResponse(e);
   }

@@ -1,0 +1,18 @@
+# 로컬 개발용 MongoDB. 운영은 MongoDB Atlas 를 사용하고 MONGODB_URI 로 연결한다.
+name: reviewforge
+
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:
