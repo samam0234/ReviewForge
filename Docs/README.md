@@ -1,5 +1,7 @@
 # Docs
 
+코드가 하는 일은 각 폴더 README가 설명합니다. [루트](../README.md), [frontend](../frontend/README.md), [backend](../backend/README.md), [ai-server](../ai-server/README.md), [ml](../ai-server/ml/README.md). 이 폴더는 기획·운영 기록입니다.
+
 | 폴더 | 용도 |
 |------|------|
 | [plan/](./plan/) | 초기 기획·로직·DB·배포 계획 |
