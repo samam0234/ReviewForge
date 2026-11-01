@@ -1,39 +1,39 @@
-# Security Policy
+# 보안 정책
 
-## Supported Versions
+## 지원 버전
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x     | :white_check_mark: |
+| 버전 | 지원 |
+|------|------|
+| 1.x | 지원함 |
 
-## Reporting a Vulnerability
+## 취약점 제보
 
-If you discover a security vulnerability in ReviewForge, please report it responsibly.
+ReviewForge에서 보안 취약점을 발견하면 공개 이슈로 올리지 말고, 아래 방법으로 비공개 제보해 주세요.
 
-- Do **not** open a public GitHub issue.
-- Contact the maintainer privately via the project repository or email associated with the account.
-- Provide a clear description, steps to reproduce, and impact assessment.
+- GitHub에 공개 이슈를 만들지 않습니다.
+- 저장소의 비공개 연락 수단 또는 계정에 연결된 이메일로 유지보수자에게 직접 알립니다.
+- 무엇이 문제인지, 어떻게 재현하는지, 어떤 영향이 있는지를 함께 적습니다.
 
-We will acknowledge receipt within 48 hours and provide an update on the resolution timeline.
+접수는 48시간 안에 확인 답장을 보내고, 이후 조치 일정을 알려 드립니다.
 
-## Security Practices
+## 개발할 때 지키는 것
 
-- Never commit API keys, MongoDB connection strings, or secrets.
-- Use environment variables (`.env`, `application.yml` with externalized config).
-- Validate all user inputs (Bean Validation on Spring Boot, input checks on Next.js).
-- Keep dependencies updated.
-- AI/ML model files and large datasets should not be committed; use Git LFS or external storage if needed.
-- **Set `JWT_SECRET` in production.** The fallback value in `backend/src/main/resources/application.yml` is public and for local development only.
-- Keep the Flask AI server (5000) and Gradio demo (7860) on an internal network; only the Spring Boot API is meant to be public.
+- API 키, MongoDB 연결 문자열, 비밀번호는 커밋하지 않습니다.
+- 설정은 환경 변수로 둡니다. `.env`, 값을 외부에서 넣는 `application.yml`.
+- 사용자 입력은 계층마다 검사합니다. Spring Boot는 Bean Validation, Next.js는 전송 전에 한 번 더 확인합니다.
+- 의존성은 지원되는 버전으로 유지합니다.
+- 모델 가중치와 큰 데이터셋은 커밋하지 않습니다. 필요하면 Git LFS나 저장소 밖의 저장소를 씁니다.
+- 운영 환경에서는 `JWT_SECRET`을 반드시 새로 정합니다. `backend/src/main/resources/application.yml`의 기본값은 저장소에 공개된 로컬 개발용입니다.
+- Flask(5000)와 Gradio(7860)는 내부망에만 둡니다. 바깥에 여는 API는 Spring Boot입니다.
 
-## Uploaded Images
+## 업로드된 리뷰 사진
 
-- Review photos are validated at every layer (browser, Spring Boot, Flask): JPEG/PNG/WEBP only, 5MB per file, 6MB per request, 40M pixels max, and the actual file format is checked with Pillow (not just the extension or `Content-Type`).
-- Images are analyzed in memory and **never stored**; only the analysis result (score, label, signal reasons, width/height) is saved to MongoDB.
-- EXIF metadata is read only to derive signals (editing software, presence of camera make/model); the raw metadata is not stored or returned.
+- 브라우저, Spring Boot, Flask가 같은 한도를 검사합니다. JPEG/PNG/WEBP만 허용하고, 파일당 5MB, 요청당 6MB, 픽셀 수는 4천만 이하입니다. Pillow로 실제 형식을 확인하며, 확장자와 `Content-Type`만 믿지 않습니다.
+- 사진은 메모리에서 분석하고 저장하지 않습니다. MongoDB에 남는 것은 점수, 라벨, 신호 이유, 가로·세로입니다.
+- EXIF는 편집 프로그램 이름, 카메라 제조사·기종 유무 같은 신호를 만들 때만 읽습니다. 원본 메타데이터는 저장하거나 응답에 넣지 않습니다.
 
-See also: [`Docs/web_management/261101_public_release_checklist.md`](./Docs/web_management/261101_public_release_checklist.md)
+관련 점검표: [`Docs/web_management/261101_public_release_checklist.md`](./Docs/web_management/261101_public_release_checklist.md)
 
-## Responsible Disclosure
+## 책임 있는 공개
 
-Thank you for helping keep ReviewForge and its users safe.
+ReviewForge와 사용자를 안전하게 지키는 데 도움을 주셔서 감사합니다.

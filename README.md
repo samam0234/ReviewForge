@@ -1,41 +1,90 @@
 # ReviewForge
 
-**AI 기반 가짜 리뷰 탐지 및 신뢰도 분석 플랫폼** — 리뷰 텍스트(와 선택적으로 리뷰 사진)를 넣으면 가짜일 확률, 판정 확신도, 판단 근거를 보여 주고 기록합니다.
+리뷰 한 줄을 넣으면 **가짜일 확률**, **판정 확신도**, **판단 근거**를 바로 보여 주고, 로그인한 사용자의 분석은 MongoDB에 남겨 대시보드로 다시 봅니다. 리뷰 사진(JPEG/PNG/WEBP)을 함께 올리면 사진 점수가 최종 확률에 가산됩니다. 사진 원본은 저장하지 않습니다.
 
 > AI-powered fake review detector. Next.js + Spring Boot + Flask (PyTorch, EfficientNet-B3, Gradio) + MongoDB.
 
-| 텍스트 분석 | 사진 분석 | 기록·통계 |
-|-------------|-----------|-----------|
-| 과장 표현·홍보 문구·반복 패턴 + PyTorch 분류기, 근거 문구 하이라이트 | EfficientNet-B3 전이학습 + EXIF·해상도·배경 규칙 | 로그인 사용자별 기록, 전체 기록 기준 통계 |
+판정은 시드 데이터로 학습한 MVP입니다. 판매 제재나 분쟁의 단독 근거로 쓰지 마세요. 학습 데이터와 한계는 [텍스트 베이스라인](./Docs/trainings/261101_baseline_model.md), [EfficientNet-B3](./Docs/trainings/261101_efficientnet_b3_image.md)에 있습니다.
 
-## 주요 기능
-
-- **가짜 확률 · 판정 확신도 · 라벨** (`Genuine` / `Suspicious` / `Fake`) — 계산 규칙은 [점수 계산 명세](./Docs/guidance/scoring.md)
-- **판단 근거** — 규칙 적중 문구와 모델 기여도가 큰 단어를 하이라이트
-- **리뷰 사진 분석 (선택)** — EfficientNet-B3 + 메타데이터 규칙. 사진은 의심을 올리기만 하고, 원본은 저장하지 않음
-- **분석 기록 대시보드** — MongoDB 집계로 전체 기록의 가중 평균·라벨 분포
-- **Gradio 데모** — 모델을 바로 시험하는 MVP 화면
-
-## 아키텍처
+## 요청이 지나가는 길
 
 ```
-브라우저 ─▶ Next.js (3000) ─▶ Spring Boot (8080) ─▶ Flask AI (5000)
-            UI · 쿠키 세션       검증 · JWT · 저장       텍스트 + EfficientNet-B3
-                                     │
-                                     ▼
-                              MongoDB (Atlas / 로컬)
+브라우저
+  │  POST /api/analyze
+  │  JSON {text}  또는  multipart text + image
+  ▼
+Next.js :3000          쿠키 rf_token → Bearer JWT
+  │                    UI · 폼 · 대시보드 · Route Handler
+  ▼
+Spring Boot :8080      검증 · 인증 · Flask 호출 · 결과 저장
+  │
+  ├──▶ Flask :5000     텍스트 분류 + (선택) EfficientNet-B3
+  │                      점수 계산은 ai-server/ml/scoring.py 한곳
+  │
+  └──▶ MongoDB         users, analyses (로그인 사용자만 저장)
 ```
 
-| 디렉터리 | 역할 | 포트 |
-|----------|------|------|
-| [`frontend/`](./frontend/) | Next.js 16 (App Router) — UI, 로그인, 사진 업로드, 대시보드 | 3000 |
-| [`backend/`](./backend/) | Spring Boot 4.1 (Java 21) — 오케스트레이터, JWT, MongoDB 집계 | 8080 |
-| [`ai-server/`](./ai-server/) | Flask + PyTorch + torchvision + Gradio — 추론 전용 | 5000 / 7860 |
-| `docker-compose.yml` | 로컬 MongoDB (운영은 MongoDB Atlas) | 27017 |
+Gradio(`:7860`)는 같은 추론기를 브라우저에서 바로 시험하는 별도 화면입니다. Spring Boot를 거치지 않으므로 기록에 남지 않습니다.
 
-역할 분리는 엄격합니다: ML 로직은 `ai-server/` 에만, 백엔드는 오케스트레이션만, 프론트는 UI 만. 자세한 구조는 [아키텍처 문서](./Docs/Architecture/reviewforge_architecture.md).
+| 단계 | 하는 일 | 하지 않는 일 |
+|------|---------|--------------|
+| [frontend/](./frontend/README.md) | 화면, 쿠키 세션, 백엔드로 요청 전달 | 모델 추론, DB 접근 |
+| [backend/](./backend/README.md) | 입력 검증, JWT, Flask 호출, 저장·통계 | 텍스트 전처리, 모델 로드 |
+| [ai-server/](./ai-server/README.md) | 전처리, 추론, 점수, Gradio | 사용자 계정, 영속 저장 |
+| [ai-server/ml/](./ai-server/ml/README.md) | 학습·추론·규칙·점수 식 | HTTP, DB |
+
+계층을 넘는 로직을 넣지 않습니다. 점수 식은 [`Docs/guidance/scoring.md`](./Docs/guidance/scoring.md)와 `ai-server/ml/scoring.py`가 기준입니다.
+
+## 화면에서 보는 것
+
+| 주소 | 내용 |
+|------|------|
+| http://localhost:3000/ | 소개, 분석·대시보드·Gradio 링크 |
+| `/analyze` | 리뷰 입력, 예시 문장, 선택 사진, 결과 카드(하이라이트) |
+| `/login` | 회원가입·로그인. 성공하면 httpOnly 쿠키 `rf_token` |
+| `/dashboard` | 로그인 필요. 최근 20건, 전체 기록의 가중 평균·라벨 분포 |
+| http://localhost:7860 | Gradio. 텍스트와 사진을 모델에 직접 넣음 |
+
+라벨은 최종 확률 `p` 기준입니다. `p < 0.4` Genuine, `0.4 ≤ p < 0.7` Suspicious, `p ≥ 0.7` Fake. 확신도는 "진짜다"가 아니라 **한쪽으로 얼마나 치우쳤는가**입니다. `p = 0.03`과 `p = 0.97`은 둘 다 확신도 97입니다.
+
+사진은 의심을 올리기만 합니다. 사진이 평범해도 과장·홍보 문구로 올라간 텍스트 점수는 내려가지 않습니다. 이미지 체크포인트(`image_model.pt`)가 없으면 사진 점수는 EXIF·해상도·배경 규칙만 쓰고, 응답 `image.source`가 `rules`입니다.
+
+## 저장소 지도
+
+```
+ReviewForge/
+├── frontend/          Next.js 16  —  README.md
+├── backend/           Spring Boot 4.1  —  README.md
+├── ai-server/         Flask + Gradio  —  README.md
+│   └── ml/            학습·추론·점수  —  README.md
+├── Docs/              기획·아키텍처·가이드·기록  —  README.md
+├── docker-compose.yml 로컬 MongoDB 7 (27017)
+├── AGENTS.md          에이전트 공통 규칙 (SSOT)
+└── ReviewForge_인수인계.md
+```
+
+| 문서 | 언제 여나 |
+|------|-----------|
+| [로컬 실행](./Docs/guidance/run_local.md) | 포트, 환경 변수, 학습 명령, API 표 |
+| [아키텍처](./Docs/Architecture/reviewforge_architecture.md) | 데이터 흐름, `analyses` 스키마, 업로드 제한 |
+| [점수 명세](./Docs/guidance/scoring.md) | 하이브리드·융합·반올림·대시보드 평균 |
+| [Docs/](./Docs/README.md) | 기획, 학습 기록, 검증, 디버깅, 배포 점검 |
+| [SECURITY.md](./SECURITY.md) | 비밀 값 금지, 취약점 제보 |
+
+## 기술 스택
+
+| 계층 | 버전·라이브러리 | 포트 |
+|------|-----------------|------|
+| Frontend | Next.js 16.4, React 19, TypeScript, App Router | 3000 |
+| Backend | Spring Boot 4.1.2, Java 21, Spring Data MongoDB, jjwt 0.13 | 8080 |
+| AI | Flask 3, PyTorch, torchvision EfficientNet-B3, Gradio | 5000 / 7860 |
+| DB | MongoDB 7 (Compose) 또는 Atlas | 27017 |
+
+확인된 로컬 도구: Python 3.10, JDK 21+, Node.js 24, Docker 28. Maven은 `backend/mvnw`가 받습니다.
 
 ## 빠른 시작
+
+네 프로세스를 각각 띄웁니다. 자세한 옵션은 [실행 가이드](./Docs/guidance/run_local.md).
 
 ```bash
 docker compose up -d --wait                      # 1. MongoDB
@@ -43,75 +92,69 @@ docker compose up -d --wait                      # 1. MongoDB
 cd ai-server                                     # 2. AI 서버
 python -m venv .venv && .venv\Scripts\activate   #    macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-python -m ml.train                               #    텍스트 모델 (생략 시 규칙 기반)
+python -m ml.train                               #    텍스트 모델. 생략하면 규칙만
 python -m app.main                               #    http://localhost:5000
 
 cd backend && mvnw.cmd spring-boot:run           # 3. 백엔드 (macOS/Linux: ./mvnw)
 
-cd frontend && cp .env.example .env.local        # 4. 프론트엔드
+cd frontend && cp .env.example .env.local        # 4. 프론트
 npm install && npm run dev                       #    http://localhost:3000
 ```
 
-전체 절차·환경 변수·EfficientNet-B3 학습은 [로컬 실행 가이드](./Docs/guidance/run_local.md).
+사진 모델은 데이터가 있을 때만 `python -m ml.image_train --data ml/data/images` 입니다. 폴더 이름은 `genuine`, `fake`.
 
-## API 요약
+동작 확인:
 
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/analyze` | JSON `{text}` 또는 multipart `text` + 선택 `image` (JPEG/PNG/WEBP, 5MB) |
-| GET | `/api/analyses?limit=20` | 내 최근 기록 (Bearer) |
-| GET | `/api/analyses/stats` | 내 전체 기록 통계 (Bearer) |
-| GET | `/api/analyses/{id}` | 기록 상세 (Bearer) |
-| POST | `/api/auth/register`, `/api/auth/login` | JWT 발급 |
-| GET | `/api/auth/me`, `/api/health` | 내 정보, 상태 |
+```bash
+curl http://localhost:8080/api/health
+# {"status":"ok","aiServer":"up"}
+```
 
-응답 예 (리뷰 `인생템!!! 무조건 사세요 강추` + 흰 배경 사진, 실제 E2E 결과 · `keywords`·`highlights` 생략):
+`aiServer`가 `down`이면 Flask가 꺼져 있거나 `AI_SERVER_URL`이 다릅니다. 분석 API는 그때 503을 돌려줍니다.
+
+## API 한눈에
+
+브라우저가 치는 주소는 Next.js(`/api/*`)이고, 같은 경로를 Spring Boot가 받습니다. Flask는 `/analyze`, `/health`만 노출합니다.
+
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| POST | `/api/analyze` | 선택 | 로그인 시에만 저장. 익명은 결과만 반환 |
+| GET | `/api/analyses?limit=20` | Bearer | 내 최근 기록 (최대 100) |
+| GET | `/api/analyses/stats` | Bearer | 내 전체 기록의 가중 평균·라벨 건수 |
+| GET | `/api/analyses/{id}` | Bearer | 본인 기록만 |
+| POST | `/api/auth/register`, `/login` | - | JWT 발급 (24시간) |
+| GET | `/api/auth/me` | Bearer | 내 정보 |
+| GET | `/api/health` | - | 백엔드와 Flask 생존 |
+
+응답 예 (과장 리뷰 + 흰 배경 사진, E2E에서 나온 값. `keywords`·`highlights` 생략):
 
 ```json
 {
-  "fakeProbability": 0.912, "confidenceScore": 91, "label": "Fake",
+  "fakeProbability": 0.912,
+  "confidenceScore": 91,
+  "label": "Fake",
   "textFakeProbability": 0.912,
-  "image": { "fakeProbability": 0.42, "label": "Suspicious", "source": "rules",
-             "signals": ["단색 배경 — 판매자 제공 연출 사진 가능성"] },
+  "image": {
+    "fakeProbability": 0.42,
+    "label": "Suspicious",
+    "source": "rules",
+    "signals": ["단색 배경 — 판매자 제공 연출 사진 가능성"]
+  },
   "saved": true
 }
 ```
 
-## 모델
+## 이 MVP에 없는 것
 
-| 대상 | 모델 | 학습 |
-|------|------|------|
-| 텍스트 | PyTorch `EmbeddingBag` + `Linear` (단어 + 한글 음절 bigram) | `python -m ml.train` — 시드 55건, val acc 0.91 / ROC-AUC 0.93 |
-| 사진 | **EfficientNet-B3** (torchvision, ImageNet 사전학습, 300px) | `python -m ml.image_train --data ml/data/images` — 데이터는 직접 준비 |
+크롤링·배치 분석, 한국어 외 언어, OAuth, 리뷰 자동 작성, 판매자 통계, 모바일 앱. 기획서의 제외 범위와 같습니다.
 
-사진 모델 체크포인트가 없으면 사진 점수는 메타데이터 규칙만으로 계산하고, 응답의 `image.source` 가 `rules` 로 표시됩니다.
-실험 기록: [텍스트 베이스라인](./Docs/trainings/261101_baseline_model.md), [EfficientNet-B3](./Docs/trainings/261101_efficientnet_b3_image.md).
+## 기여
 
-> ⚠️ 시드 데이터가 매우 작아 판정은 **참고용**입니다. 실제 판매·제재 판단에 단독으로 쓰지 마세요.
-
-## 테스트
-
-```bash
-cd ai-server && python -m unittest discover -s tests -t .   # 29 tests
-cd backend && mvnw.cmd -B test                               # 13 tests
-cd frontend && npm run lint && npm run build
-```
-
-검증 결과: [v1.1 검증 체크리스트](./Docs/vaildates/261101_v1.1_checklist.md).
-
-## 문서
-
-| 문서 | 내용 |
-|------|------|
-| [`AGENTS.md`](./AGENTS.md), [`ReviewForge_인수인계.md`](./ReviewForge_인수인계.md) | 에이전트·기여 규칙 (SSOT) |
-| [`Docs/`](./Docs/README.md) | 기획, 아키텍처, 가이드, 학습, 검증, 디버깅, 배포 기록 |
-| [`SECURITY.md`](./SECURITY.md) | 보안 정책·취약점 제보 |
-
-## 기여 규칙 요약
-
-- 작업은 `feature/*` 브랜치에서만, `develop`/`main` 은 `--no-ff` 병합 전용
-- 커밋 메시지: `type(scope): 한국어 요약` (예: `feat(ai-server): 이미지 규칙 추가`)
-- 커밋마다 `Docs/branchs/YYMMDD_HHMM_[id]_[이름]_[브랜치].md` 기록 ([템플릿](./Docs/branchs/COMMIT_TEMPLATE.md))
+- 작업 브랜치는 `feature/*`. `develop`와 `main`은 `--no-ff` 병합만.
+- 커밋: `type(scope): 한국어 요약`. 예) `docs(readme): 계층별 README 추가`
+- 커밋마다 `Docs/branchs/` 기록. 템플릿은 [`COMMIT_TEMPLATE.md`](./Docs/branchs/COMMIT_TEMPLATE.md).
+- 규칙 원문: [`AGENTS.md`](./AGENTS.md), [`ReviewForge_인수인계.md`](./ReviewForge_인수인계.md).
+- `.env`, Atlas 연결 문자열, `JWT_SECRET` 실값은 커밋하지 않습니다.
 
 ## 라이선스
 
